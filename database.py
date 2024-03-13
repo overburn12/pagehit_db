@@ -29,6 +29,7 @@ def init_db(db_uri):
     Base.metadata.create_all(engine)
 
 def validate_data(data):
+    data_fields = data.keys()
     expected_fields = {
         'website_id': str,
         'page_url': str,
@@ -41,17 +42,16 @@ def validate_data(data):
         'is_ssl': bool
     }
 
-    data_fields = data.keys()
-    for field, field_type in expected_fields.items():
+    for field in expected_fields:
         if field not in data_fields:
             #skip visit_datetime if not supplied, it has a default value
             if field == 'visit_datetime':
                 continue
             return False, f'{field} is missing from data'
-            
-        if not isinstance(data[field], field_type):
-            if field == 'visit_datetime' and data[field] is not None:
-                return False, f'{field} has incorrect type, expected {field_type}'
+
+    for field in data_fields:
+        if not isinstance(data[field], expected_fields[field]):
+            return False, f"{field} has incorrect type, expected {expected_fields[field].__name__}"   
         
     return True, 'data verified'
 
