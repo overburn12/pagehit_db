@@ -1,5 +1,5 @@
 
-from flask import Flask, request, jsonify, session, flash, redirect, url_for, render_template
+from flask import Flask, request, jsonify, Response, session, flash, redirect, url_for, render_template
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from dotenv import load_dotenv
@@ -8,6 +8,9 @@ import os
 import database
 
 app = Flask(__name__)
+
+with open('static/favicon.ico', 'rb') as f:
+    favicon_data = f.read()
 
 def admin_required(f):
     @wraps(f)
@@ -89,6 +92,10 @@ def logout():
     return redirect(url_for('admin_login'))
 
 #--------------------------------------------------------------------------------------
+
+@app.route('/favicon.ico')
+def favicon():
+    return Response(favicon_data, mimetype='image/vnd.microsoft.icon')
 
 @app.errorhandler(404)
 def page_not_found(e):
