@@ -45,8 +45,7 @@ with open('static/favicon.ico', 'rb') as f:
     favicon_data = f.read()
 
 
-def set_admin_cookie():
-    response = make_response("Cookie set")
+def set_admin_cookie(response):
     response.set_cookie('admin_cookie', 'true', domain='.overburn.dev')
     return response
 
@@ -104,8 +103,8 @@ def admin_login():
         password = request.form['password']
         if username == ADMIN_NAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
             session['logged_in'] = True
-            set_admin_cookie() 
-            return redirect(url_for('admin_sql'))
+            response = make_response(redirect(url_for('admin_sql')))
+            return set_admin_cookie(response)
         else:
             flash('Invalid credentials')
     return render_template('admin_login.html')  # Your login page template
