@@ -28,6 +28,7 @@ def init_db(db_uri):
     engine = create_engine(db_uri, echo=False)
     Base.metadata.create_all(engine)
 
+
 def validate_data(data):
     data_fields = data.keys()
     expected_fields = {
@@ -55,6 +56,7 @@ def validate_data(data):
         
     return True, 'data verified'
 
+
 def add(req_data):
     # Convert JSON to dictionary if necessary
     if isinstance(req_data, str):
@@ -68,6 +70,7 @@ def add(req_data):
     page_hit = PageHit(**data)
     session.add(page_hit)
     session.commit()
+
 
 def query(raw_text):
     Session = sessionmaker(bind=engine)
