@@ -1,5 +1,5 @@
 
-from flask import Flask, request, jsonify, Response, session, flash, redirect, url_for, render_template
+from flask import Flask, request, jsonify, Response, session, flash, redirect, url_for, render_template, make_response
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from dotenv import load_dotenv
@@ -8,9 +8,6 @@ import os
 import database
 
 app = Flask(__name__)
-
-with open('static/favicon.ico', 'rb') as f:
-    favicon_data = f.read()
 
 def admin_required(f):
     @wraps(f)
@@ -29,6 +26,18 @@ admin_password = os.getenv('ADMIN_PASSWORD')
 admin_password_hash = generate_password_hash(admin_password)  
 db_uri = os.getenv('DB_URI')
 database.init_db(db_uri)
+
+#--------------------------------------------------------------------------------------
+# helper functions
+#--------------------------------------------------------------------------------------
+
+with open('static/favicon.ico', 'rb') as f:
+    favicon_data = f.read()
+
+def set_admin_cookie():
+    response = make_response("Cookie set")
+    response.set_cookie('admin_cookie', 'true')
+    return response
 
 #--------------------------------------------------------------------------------------
 # sql routes
@@ -81,6 +90,7 @@ def admin_login():
         password = request.form['password']
         if username == admin_username and check_password_hash(admin_password_hash, password):
             session['logged_in'] = True
+            set_admin_cookie() 
             return redirect(url_for('admin_sql'))
         else:
             flash('Invalid credentials')
