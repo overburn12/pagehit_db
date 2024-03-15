@@ -47,7 +47,7 @@ with open('static/favicon.ico', 'rb') as f:
 
 def set_admin_cookie():
     response = make_response("Cookie set")
-    response.set_cookie('admin_cookie', 'true')
+    response.set_cookie('admin_cookie', 'true', domain='.overburn.dev')
     return response
 
 
