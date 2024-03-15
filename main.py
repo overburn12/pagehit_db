@@ -44,7 +44,7 @@ def create_page_hit():
     return jsonify({'message': 'Page hit created successfully'}), 201
 
 
-@app.route('/admin/sql', methods=['POST'])
+@app.route('/sql', methods=['POST'])
 @admin_required
 def execute_sql_query():
     data = request.json
@@ -63,27 +63,27 @@ def execute_sql_query():
 # admin routes
 #--------------------------------------------------------------------------------------
 
-@app.route('/admin')
+@app.route('/')
 @admin_required
-def admin_dashboard():
-    return render_template('admin_dashboard.html')
+def admin_sql():
+    return render_template('admin_sql.html')
 
-@app.route('/admin/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def admin_login():
     if 'logged_in' in session and session['logged_in']:
-        return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('admin_sql'))
 
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         if username == admin_username and check_password_hash(admin_password_hash, password):
             session['logged_in'] = True
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin_sql'))
         else:
             flash('Invalid credentials')
     return render_template('admin_login.html')  # Your login page template
 
-@app.route('/admin/logout')
+@app.route('/logout')
 def logout():
     session.pop('logged_in', None)
     return redirect(url_for('admin_login'))

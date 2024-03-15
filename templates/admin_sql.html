@@ -67,7 +67,7 @@
     function submitQuery() {
         document.getElementById('query_results').innerHTML = '';
         const query = document.getElementById('queryInput').value;
-        fetch('/admin/sql', {
+        fetch('/sql', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
