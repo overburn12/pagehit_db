@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, Response, session, flash, redirect, u
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from dotenv import load_dotenv
-import os
+import os, datetime
 
 import database
 
@@ -25,7 +25,7 @@ def admin_required(f):
 # environment variables / constants
 #--------------------------------------------------------------------------------------
 
-HOST='0.0.0.0'
+HOST='::'
 PORT=8082
 
 load_dotenv()
@@ -46,7 +46,8 @@ with open('static/favicon.ico', 'rb') as f:
 
 
 def set_admin_cookie(response):
-    response.set_cookie('admin_cookie', 'true', domain='.overburn.dev')
+    expiration = datetime.datetime.now() + datetime.timedelta(days=30)
+    response.set_cookie('admin_cookie', 'true', domain='.overburn.dev', expires=expiration)
     return response
 
 
