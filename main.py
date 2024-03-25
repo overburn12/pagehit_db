@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os, datetime
 
 import database
+from page_tracker import track_page
 
 app = Flask(__name__)
 
@@ -122,6 +123,12 @@ def logout():
 @app.route('/favicon.ico')
 def favicon():
     return Response(favicon_data, mimetype='image/vnd.microsoft.icon')
+
+
+@app.after_request
+def after_request(response):
+    track_page(request, response)
+    return response
 
 
 @app.errorhandler(404)
