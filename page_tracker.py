@@ -3,8 +3,6 @@ from dotenv import load_dotenv
 from database import add
 load_dotenv()
 
-DB_URL = os.getenv('DB_URL')
-
 def track_page(request, response):
     visitor_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     is_ssl = request.headers.get('X-Forwarded-Proto', 'http') == 'https'
