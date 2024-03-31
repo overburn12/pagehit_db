@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os, datetime
 
 import database
-from page_tracker import track_page
 
 app = Flask(__name__)
 
@@ -127,7 +126,9 @@ def favicon():
 
 @app.after_request
 def after_request(response):
-    track_page(request, response)
+    page_route = request.path
+    if page_route != '/create':
+        database.track_page(request, response)
     return response
 
 
