@@ -62,8 +62,6 @@
         <option value="monthly">Monthly</option>
         <option value="daily" selected>Daily</option>
         <option value="hourly">Hourly</option>
-        <option value="minutely">Minutely</option>
-        <option value="secondly">Secondly</option>
     </select>
     <input type="text" id="dataColumn" placeholder="Data Column Name" value="total_hits">
     <button onclick="renderChart()">Render Chart</button>
@@ -243,38 +241,52 @@
             return { labels: [], data: [] };
         }
     
-        const fullTimeBlocks = generateTimeBlocks(data, timeColumn, granularity);
-        const mergedData = mergeDataIntoTimeBlocks(data, fullTimeBlocks, timeColumn, dataColumn);
-    
+        const firstTime = new Date(data.rows[0][timeColumn] + 'Z');
+        const lastTime = new Date(data.rows[data.rows.length - 1][timeColumn] + 'Z');    
+        let currentTime = new Date(firstTime);
+        let fullTimeBlocks = [];
+        
+        //create a blank array of time blocks
+        while (currentTime <= lastTime) {
+            fullTimeBlocks.push(formatTime(currentTime, granularity));
+            incrementTime(currentTime, granularity);
+        }
+
+        // Convert data rows into a map for easier lookup
+        const dataMap = new Map(data.rows.map(row => [row[timeColumn], row[dataColumn]]));
+        let mergedData = [];
+
+        //debugging outputs
+        console.log("DataMap:");
+        dataMap.forEach((value, key) => {
+            console.log(key + ' = ' + value);
+        });
+        console.log("TimeBlocks:");
+        fullTimeBlocks.forEach((block) => {
+            console.log(block);
+        });
+
+        // Merge data points into the time blocks
+        mergedData = fullTimeBlocks.map(block => {
+            const value = dataMap.has(block) ? dataMap.get(block) : 0;
+            console.log(`Merging data for time block ${block}: value = ${value}`);
+            return {
+                time: block,
+                value: value
+            };
+        });
+  
         return {
             labels: mergedData.map(item => item.time),
             data: mergedData.map(item => item.value)
         };
     }
-
-    function generateTimeBlocks(data, timeColumn, granularity) {
-        if (data.rows.length === 0) {
-            return [];
-        }
-
-        const firstTime = new Date(data.rows[0][timeColumn] + 'Z');
-        const lastTime = new Date(data.rows[data.rows.length - 1][timeColumn] + 'Z');    
-        let timeBlocks = [];
-        let currentTime = new Date(firstTime);
-    
-        while (currentTime <= lastTime) {
-            timeBlocks.push(formatTime(currentTime, granularity));
-            incrementTime(currentTime, granularity);
-        }
-    
-        return timeBlocks;
-    }
     
     function formatTime(date, granularity) {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0'); // JavaScript months are 0-indexed
-        const day = date.getDate().toString().padStart(2, '0');
-        const hour = date.getHours().toString().padStart(2, '0');
+        const year = date.getUTCFullYear();
+        const month = (date.getUTCMonth() + 1).toString().padStart(2, '0'); // JavaScript months are 0-indexed
+        const day = date.getUTCDate().toString().padStart(2, '0');
+        const hour = date.getUTCHours().toString().padStart(2, '0');
     
         switch (granularity) {
             case 'yearly':
@@ -293,35 +305,20 @@
     function incrementTime(date, granularity) {
         switch (granularity) {
             case 'yearly':
-                date.setFullYear(date.getFullYear() + 1);
+                date.setUTCFullYear(date.getUTCFullYear() + 1);
                 break;
             case 'monthly':
-                date.setMonth(date.getMonth() + 1);
+                date.setUTCMonth(date.getUTCMonth() + 1);
                 break;
             case 'daily':
-                date.setDate(date.getDate() + 1);
+                date.setUTCDate(date.getUTCDate() + 1);
                 break;
             case 'hourly':
-                date.setHours(date.getHours() + 1);
+                date.setUTCHours(date.getUTCHours() + 1);
                 break;
         }
     }
     
-    function mergeDataIntoTimeBlocks(data, timeBlocks, timeColumn, dataColumn) {
-        // Convert data rows into a map for easier lookup
-        const dataMap = new Map(data.rows.map(row => [row[timeColumn], row[dataColumn]]));
-        
-        // Merge actual data into the time blocks
-        const mergedData = timeBlocks.map(block => {
-            const value = dataMap.has(block) ? dataMap.get(block) : 0;
-            return {
-                time: block,
-                value: value
-            };
-        });
-
-        return mergedData;
-    }
 </script>
 
 {% endblock %}
