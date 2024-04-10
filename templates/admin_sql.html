@@ -170,9 +170,13 @@
 
 <script>
     let myChart = null;
-    
-    function createChart() {    
-        let newChart = new Chart(document.getElementById('myChart').getContext('2d'), {
+
+    function resetChart(){
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        myChart = new Chart(document.getElementById('myChart').getContext('2d'), {
             type: "line",
             data: {
                 labels: [],
@@ -197,89 +201,86 @@
                 }
             }
         });
-        return newChart;
     }
 
     function renderChart() {
         const timeColumn = document.getElementById('timeColumn').value;
         const dataColumn = document.getElementById('dataColumn').value;
         const granularity = document.getElementById('timeGranularity').value;
-        const queryData = sqlResponse;
+        const canvas = document.getElementById('myChart');
 
-        const processedData = processDataForChart(queryData, timeColumn, dataColumn, granularity);
+        const processedData = processDataForChart(sqlResponse, timeColumn, dataColumn, granularity);
         
         const minWidthPerDataPoint = 10; // Minimum width per data point in pixels
         const extraWidth = 100; // Extra width for axes and borders
+        
+        //calculate chart size based on the number of entries in the sql response
         const totalWidth = minWidthPerDataPoint * processedData.labels.length + extraWidth;
         
-        // Set the width of the canvas based on the sql response size
-        const canvas = document.getElementById('myChart');
+        // Set the width of the canvas
         canvas.style.width = totalWidth + 'px';
         canvas.style.height = '500px';
         
-        if (myChart) {
-            myChart.destroy();
-        }
-
         // we have to destroy then create a new chart to adjust to the new canvas size which is based on the sql response data
-        myChart = createChart();
-        
-        myChart.data =  {
-            labels: processedData.labels,
-            datasets: [{
-                label: 'Data',
-                data: processedData.data
-            }]
-        };
+        resetChart();
 
+        //load the data into the chart
+        myChart.data = processedData;
         myChart.update();
     }
 
     function processDataForChart(data, timeColumn, dataColumn, granularity) {
+        let returnObject = { labels: [], datasets: [] };
+
         if (!data || !data.rows || data.rows.length === 0) {
             console.error("No data to process");
-            return { labels: [], data: [] };
+            return returnObject;
         }
+
+        let dataColumns = dataColumn.split(',').map(colName => colName.trim());
     
+        // +Z since our data should always be UTC
         const firstTime = new Date(data.rows[0][timeColumn] + 'Z');
         const lastTime = new Date(data.rows[data.rows.length - 1][timeColumn] + 'Z');    
         let currentTime = new Date(firstTime);
         let fullTimeBlocks = [];
-        
+
         //create a blank array of time blocks
         while (currentTime <= lastTime) {
             fullTimeBlocks.push(formatTime(currentTime, granularity));
             incrementTime(currentTime, granularity);
         }
 
-        // Convert data rows into a map for easier lookup
-        const dataMap = new Map(data.rows.map(row => [row[timeColumn], row[dataColumn]]));
-        let mergedData = [];
+        const getColor = createColorIterator();
 
-        //debugging outputs
-        console.log("DataMap:");
-        dataMap.forEach((value, key) => {
-            console.log(key + ' = ' + value);
-        });
-        console.log("TimeBlocks:");
-        fullTimeBlocks.forEach((block) => {
-            console.log(block);
+        dataColumns.forEach(colName => {
+            // Convert data rows into a map for easier lookup
+            const dataMap = new Map(data.rows.map(row => [row[timeColumn], row[colName]]));
+            let mergedData = [];
+            
+            // Merge data points into the time blocks
+            mergedData = fullTimeBlocks.map(block => {
+                const value = dataMap.has(block) ? dataMap.get(block) : 0;
+                return {
+                    time: block,
+                    value: value
+                };
+            });
+            
+            //checked so we only assign the label 1 time
+            if(returnObject.labels.length == 0){
+                returnObject.labels = mergedData.map(item => item.time);
+            }
+            
+            returnObject.datasets.push({
+                label: colName, 
+                data: mergedData.map(item => item.value), 
+                borderColor: getColor(),
+                borderWidth: 1
+            });
         });
 
-        // Merge data points into the time blocks
-        mergedData = fullTimeBlocks.map(block => {
-            const value = dataMap.has(block) ? dataMap.get(block) : 0;
-            console.log(`Merging data for time block ${block}: value = ${value}`);
-            return {
-                time: block,
-                value: value
-            };
-        });
-  
-        return {
-            labels: mergedData.map(item => item.time),
-            data: mergedData.map(item => item.value)
-        };
+        return returnObject;
     }
     
     function formatTime(date, granularity) {
@@ -317,6 +318,29 @@
                 date.setUTCHours(date.getUTCHours() + 1);
                 break;
         }
+    }
+
+    //this is an iterator that returns the next color in the list
+    function createColorIterator() {
+        const bgColors = [
+          'rgba(255, 99, 132)', // Red
+          'rgba(54, 162, 235)', // Blue
+          'rgba(255, 206, 86)', // Yellow
+          'rgba(75, 192, 192)', // Green
+          'rgba(153, 102, 255)', // Purple
+          'rgba(255, 159, 64)', // Orange
+          'rgba(199, 199, 199)', // Grey
+          'rgba(83, 51, 237)', // Indigo
+          'rgba(64, 224, 208)', // Turquoise
+          'rgba(255, 99, 71)'   // Tomato
+        ];
+        let currentIndex = 0;
+      
+        return function getColor() {
+          const color = bgColors[currentIndex]; // Get the current color
+          currentIndex = (currentIndex + 1) % bgColors.length; // Move to next index or loop back to 0
+          return color; // Return the current color
+        };
     }
     
 </script>
