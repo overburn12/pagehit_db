@@ -168,6 +168,7 @@
 
 <script>
     let myChart = null;
+    const canvas = document.getElementById('myChart');
 
     function resetChart(){
         if (myChart) {
@@ -203,24 +204,14 @@
 
     function renderChart() {
         const granularity = document.getElementById('timeGranularity').value;
-        const canvas = document.getElementById('myChart');
-
         const processedData = processDataForChart(sqlResponse, granularity);
         
-        const minWidthPerDataPoint = 10; // Minimum width per data point in pixels
-        const extraWidth = 100; // Extra width for axes and borders
-        
-        //calculate chart size based on the number of entries in the sql response
-        const totalWidth = minWidthPerDataPoint * processedData.labels.length + extraWidth;
-        
-        // Set the width of the canvas
-        canvas.style.width = totalWidth + 'px';
+        // Set the canvas size
+        canvas.style.width = ((10 * processedData.labels.length) + 100) + 'px';
         canvas.style.height = '500px';
         
-        // we have to destroy then create a new chart to adjust to the new canvas size which is based on the sql response data
+        // we have to destroy then create a new chart because totalWidth is based on the sql response size
         resetChart();
-
-        //load the data into the chart
         myChart.data = processedData;
         myChart.update();
     }
@@ -236,44 +227,28 @@
         let dataColumns = data.columns; //load all the columns
         let timeColumn = dataColumns.shift(); //the first one is the date
     
-        // +Z since our data should always be UTC
-        const firstTime = new Date(data.rows[0][timeColumn] + 'Z');
+        const firstTime = new Date(data.rows[0][timeColumn] + 'Z'); // +Z since our data should always be UTC
         const lastTime = new Date(data.rows[data.rows.length - 1][timeColumn] + 'Z');    
-        let currentTime = new Date(firstTime);
         let fullTimeBlocks = [];
 
-        //create a blank array of time blocks
-        while (currentTime <= lastTime) {
-            fullTimeBlocks.push(formatTime(currentTime, granularity));
-            incrementTime(currentTime, granularity);
+        for(let currentTime = new Date(firstTime); 
+            currentTime <= lastTime; 
+            incrementTime(currentTime, granularity)){
+                fullTimeBlocks.push(formatTime(currentTime, granularity));
         }
 
+        returnObject.labels = fullTimeBlocks;
         const getColor = createColorIterator();
 
         dataColumns.forEach(colName => {
-            // Convert data rows into a map for easier lookup
             const dataMap = new Map(data.rows.map(row => [row[timeColumn], row[colName]]));
-            let mergedData = [];
-            
-            // Merge data points into the time blocks
-            mergedData = fullTimeBlocks.map(block => {
-                const value = dataMap.has(block) ? dataMap.get(block) : 0;
-                return {
-                    time: block,
-                    value: value
-                };
-            });
-            
-            //checked so we only assign the label 1 time
-            if(returnObject.labels.length == 0){
-                returnObject.labels = mergedData.map(item => item.time);
-            }
-            
+            let mergedData = fullTimeBlocks.map(block => dataMap.get(block) || 0);
+
             returnObject.datasets.push({
                 label: colName, 
-                data: mergedData.map(item => item.value), 
+                data: mergedData, 
                 borderColor: getColor(),
-                borderWidth: 1
+                tension: 0.3
             });
         });
 
@@ -317,23 +292,23 @@
         }
     }
 
-    //this is an iterator that returns the next color in the list
+    //this is a closure iterator that returns the next color in the list
     function createColorIterator() {
         const bgColors = [
-          'rgba(255, 99, 132)', // Red
-          'rgba(54, 162, 235)', // Blue
-          'rgba(255, 206, 86)', // Yellow
-          'rgba(75, 192, 192)', // Green
-          'rgba(153, 102, 255)', // Purple
-          'rgba(255, 159, 64)', // Orange
-          'rgba(199, 199, 199)', // Grey
-          'rgba(83, 51, 237)', // Indigo
-          'rgba(64, 224, 208)', // Turquoise
-          'rgba(255, 99, 71)'   // Tomato
+            'rgba(252, 186, 3)', // Soft Amber
+            'rgba(165, 230, 253)', // Gentle Blue
+            'rgba(205, 240, 191)', // Light Mint Green
+            'rgba(244, 194, 194)', // Salmon Pink
+            'rgba(255, 248, 225)', // Vanilla
+            'rgba(163, 228, 215)', // Aquamarine
+            'rgba(198, 139, 119)', // Antique Brass
+            'rgba(85, 98, 112)', // Lead Grey
+            'rgba(231, 206, 188)', // Bone
+            'rgba(207, 216, 220)' // Blue Grey
         ];
         let currentIndex = 0;
       
-        return function getColor() {
+        return () => {
           const color = bgColors[currentIndex]; // Get the current color
           currentIndex = (currentIndex + 1) % bgColors.length; // Move to next index or loop back to 0
           return color; // Return the current color
