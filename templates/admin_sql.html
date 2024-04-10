@@ -56,14 +56,12 @@
 
 {{block_header('Query Results')}}
 <div>
-    <input type="text" id="timeColumn" placeholder="Time Column Name" value="date">
     <select id="timeGranularity">
         <option value="yearly">Yearly</option>
         <option value="monthly">Monthly</option>
         <option value="daily" selected>Daily</option>
         <option value="hourly">Hourly</option>
     </select>
-    <input type="text" id="dataColumn" placeholder="Data Column Name" value="total_hits">
     <button onclick="renderChart()">Render Chart</button>
 </div>
 <div id="chartContainer">
@@ -204,12 +202,10 @@
     }
 
     function renderChart() {
-        const timeColumn = document.getElementById('timeColumn').value;
-        const dataColumn = document.getElementById('dataColumn').value;
         const granularity = document.getElementById('timeGranularity').value;
         const canvas = document.getElementById('myChart');
 
-        const processedData = processDataForChart(sqlResponse, timeColumn, dataColumn, granularity);
+        const processedData = processDataForChart(sqlResponse, granularity);
         
         const minWidthPerDataPoint = 10; // Minimum width per data point in pixels
         const extraWidth = 100; // Extra width for axes and borders
@@ -229,7 +225,7 @@
         myChart.update();
     }
 
-    function processDataForChart(data, timeColumn, dataColumn, granularity) {
+    function processDataForChart(data, granularity) {
         let returnObject = { labels: [], datasets: [] };
 
         if (!data || !data.rows || data.rows.length === 0) {
@@ -237,7 +233,8 @@
             return returnObject;
         }
 
-        let dataColumns = dataColumn.split(',').map(colName => colName.trim());
+        let dataColumns = data.columns; //load all the columns
+        let timeColumn = dataColumns.shift(); //the first one is the date
     
         // +Z since our data should always be UTC
         const firstTime = new Date(data.rows[0][timeColumn] + 'Z');
