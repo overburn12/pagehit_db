@@ -37,7 +37,8 @@ def query(raw_text):
     result = session.execute(text(raw_text))
     rows = result.fetchall()
     columns = result.keys()
-    
+    session.close()
+
     formatted_results = {
                 'columns': list(columns),
                 'rows': [dict(zip(columns, row)) for row in rows]
