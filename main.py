@@ -130,7 +130,6 @@ def parse_log_task():
         database.rotate_log_file(LOG_FILE_PATH, SCRAPED_LOG_FILE_PATH)
         database.parse_log_file(SCRAPED_LOG_FILE_PATH)
         database.cleanup(SCRAPED_LOG_FILE_PATH)
-        print ('scraped logs')
 
 
 #--------------------------------------------------------------------------------------
