@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, text, Column, Integer, String, DateTime, Boolean, Index
+from sqlalchemy import create_engine, text, Column, Integer, String, DateTime, Index
 from sqlalchemy.orm import sessionmaker, declarative_base
-import json
+import json, shutil, os
 from datetime import datetime
 
 Base = declarative_base()
@@ -8,15 +8,16 @@ Base = declarative_base()
 class PageHit(Base):
     __tablename__ = 'page_hit'
     id = Column(Integer, primary_key=True)
-    website_id = Column(String(50)) 
-    page_url = Column(String(500))
+    visit_datetime = Column(DateTime) 
+    visitor_id = Column(String(100))
+    scheme = Column(String(5)) 
+    website_id = Column(String(100)) 
+    page_url = Column(String(100))
     method = Column(String(10))  
     response_code = Column(Integer)
-    visit_datetime = Column(DateTime, default=datetime.utcnow) 
-    visitor_id = Column(String(100))
+    bytes_sent = Column(Integer)
     referrer_url = Column(String(500))
     user_agent = Column(String(500))
-    is_ssl = Column(Boolean) 
 
 Index('idx_visit_datetime_website_id', PageHit.visit_datetime, PageHit.website_id)
 
@@ -26,49 +27,6 @@ def init_db(db_uri):
     global engine
     engine = create_engine(db_uri, echo=False)
     Base.metadata.create_all(engine)
-
-
-def validate_data(data):
-    data_fields = data.keys()
-    expected_fields = {
-        'website_id': str,
-        'page_url': str,
-        'method': str,
-        'response_code': int,
-        'visit_datetime': datetime,
-        'visitor_id': str,
-        'referrer_url': str,
-        'user_agent': str,
-        'is_ssl': bool
-    }
-
-    for field in expected_fields:
-        if field not in data_fields:
-            #skip visit_datetime if not supplied, it has a default value
-            if field == 'visit_datetime':
-                continue
-            return False, f'{field} is missing from data'
-
-    for field in data_fields:
-        if not isinstance(data[field], expected_fields[field]):
-            return False, f"{field} has incorrect type, expected {expected_fields[field].__name__}"   
-        
-    return True, 'data verified'
-
-
-def add(req_data):
-    # Convert JSON to dictionary if necessary
-    if isinstance(req_data, str):
-        data = json.loads(req_data)
-    else:
-        data = req_data
-    
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    page_hit = PageHit(**data)
-    session.add(page_hit)
-    session.commit()
 
 
 def query(raw_text):
@@ -85,19 +43,36 @@ def query(raw_text):
             }
     return formatted_results
 
-def track_page(request, response):
-    ##used to track self http activity, rather than the /create endpoint
-    visitor_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-    is_ssl = request.headers.get('X-Forwarded-Proto', 'http') == 'https'
-    data = {
-        'website_id': 'admin.overburn.dev',
-        'page_url': request.path,
-        'response_code': response.status_code,
-        'visitor_id': visitor_ip,
-        'referrer_url': request.referrer or '',
-        'user_agent': request.user_agent.string,
-        'method': request.method,
-        'is_ssl': is_ssl
-    }
 
-    add(data)
+def parse_log_file(log_path):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    with open(log_path, 'r') as file:
+        for line in file:
+            try:
+                log_entry = json.loads(line)
+                page_hit = PageHit(
+                    visit_datetime=datetime.strptime(log_entry['time_local'], '%d/%b/%Y:%H:%M:%S %z'),
+                    visitor_id=log_entry['visitor_id'],
+                    scheme=log_entry['scheme'],
+                    website_id=log_entry['website_id'],
+                    page_url=log_entry['page_url'],
+                    method=log_entry['method'],
+                    response_code=int(log_entry['response_code']),
+                    bytes_sent=int(log_entry['bytes_sent']),
+                    referrer_url=log_entry['referrer_url'],
+                    user_agent=log_entry['user_agent']
+                )
+                session.add(page_hit)
+            except Exception as e:
+                print(f"Error processing line: {e}")
+            session.commit()
+
+
+def rotate_log_file(from_path, to_path):
+    shutil.move(from_path, to_path) #change the filename
+    open(from_path, 'a').close() #create a blank file
+
+
+def cleanup(log_path):
+    os.remove(log_path)

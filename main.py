@@ -4,6 +4,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from dotenv import load_dotenv
 import os, datetime
+import threading
+import time
 
 import database
 
@@ -25,17 +27,20 @@ def admin_required(f):
 # environment variables / constants
 #--------------------------------------------------------------------------------------
 
-HOST='::'
-PORT=8082
-
 load_dotenv()
+PORT = os.getenv('PORT')
+
 app.secret_key = os.getenv('SECRET_KEY')
 ADMIN_NAME = os.getenv('ADMIN_NAME')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
-ADMIN_PASSWORD_HASH = generate_password_hash(ADMIN_PASSWORD)  
+ADMIN_PASSWORD_HASH = generate_password_hash(ADMIN_PASSWORD)
+
 DB_URI = os.getenv('DB_URI')
+LOG_FILE_PATH = os.getenv('LOG_FILE_PATH')
+SCRAPED_LOG_FILE_PATH = os.getenv('SCRAPED_LOG_FILE_PATH')
 
 database.init_db(DB_URI)
+
 
 #--------------------------------------------------------------------------------------
 # helper functions
@@ -54,19 +59,6 @@ def set_admin_cookie(response):
 #--------------------------------------------------------------------------------------
 # sql routes
 #--------------------------------------------------------------------------------------
-
-@app.route('/create', methods=['POST'])
-def create_page_hit():
-
-    req_data = request.get_json()
-
-    is_valid, reason = database.validate_data(req_data)
-    if not is_valid:
-        return jsonify({'error': reason}), 400
-    
-    database.add(req_data)
-    return jsonify({'message': 'Page hit created successfully'}), 201
-
 
 @app.route('/sql', methods=['POST'])
 @admin_required
@@ -108,7 +100,7 @@ def admin_login():
             return set_admin_cookie(response)
         else:
             flash('Invalid credentials')
-    return render_template('admin_login.html')  # Your login page template
+    return render_template('admin_login.html') 
 
 
 @app.route('/logout')
@@ -124,14 +116,6 @@ def favicon():
     return Response(favicon_data, mimetype='image/vnd.microsoft.icon')
 
 
-@app.after_request
-def after_request(response):
-    page_route = request.path
-    if page_route != '/create':
-        database.track_page(request, response)
-    return response
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     path = request.path
@@ -140,5 +124,19 @@ def page_not_found(e):
 
 #--------------------------------------------------------------------------------------
 
+def parse_log_task():
+    while True:
+        time.sleep(60)  # Sleep for 60 seconds
+        database.rotate_log_file(LOG_FILE_PATH, SCRAPED_LOG_FILE_PATH)
+        database.parse_log_file(SCRAPED_LOG_FILE_PATH)
+        database.cleanup(SCRAPED_LOG_FILE_PATH)
+
+
+#--------------------------------------------------------------------------------------
+
 if __name__ == '__main__':
-    app.run(host=HOST, port=PORT)
+    thread = threading.Thread(target=parse_log_task)
+    thread.daemon = True
+    thread.start()
+
+    app.run(host='::', port=PORT)

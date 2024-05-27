@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-   pagehit_db SQL query
+   Database Query
 {% endblock %}
 
 {% block head %}
@@ -11,8 +11,14 @@
             width: 800px;
             overflow-x: auto;
         }
+        #canvasContainer {
+            width: 800px; /* Initial width, will be set dynamically by JavaScript */
+            max-height: 500px;
+        }
         #myChart {
             display: block;
+            width: 100%;
+            height: 500px;
         }
         #query_results{
             overflow-x: auto;
@@ -63,52 +69,19 @@
         <option value="hourly">Hourly</option>
     </select>
     <button onclick="renderChart()">Render Chart</button>
+    <span style="margin-left: 20px;">Min spacing between data points:</span>
+    <input type="text" id="paddingText" value="10" style="width: 20px;">
 </div>
 <div id="chartContainer">
-    <canvas id="myChart"></canvas>
+    <div id="canvasContainer">
+        <canvas id="myChart"></canvas>
+    </div>
 </div>
 <div id="query_results"></div>
 {{block_footer()}}
 
+
 <script>
-    var sqlResponse = null;
-
-    function submitQuery() {
-        document.getElementById('query_results').innerHTML = '';
-        const query = document.getElementById('queryInput').value;
-        fetch('/sql', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query: query })
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('query_results').innerHTML = createHtmlTableFromData(data);
-            sqlResponse = data;
-        }).catch(error => {
-            console.log('catch-error: ', error);
-        });
-    }
-
-    function createHtmlTableFromData(data) {
-        let tableHtml = "<table><thead><tr>";
-        data.columns.forEach(column => {
-            tableHtml += `<th>${column}</th>`;
-        });
-        tableHtml += "</tr></thead><tbody>";
-        data.rows.forEach(row => {
-            tableHtml += "<tr>";
-            data.columns.forEach(column => {
-                tableHtml += `<td>${row[column]}</td>`;
-            });
-            tableHtml += "</tr>";
-        });
-        tableHtml += "</tbody></table>";
-        return tableHtml;
-    }
-
     function saveQuery() {
         const title = prompt("Enter a title for the query:");
         if (title) {
@@ -167,53 +140,86 @@
 </script>
 
 <script>
-    let myChart = null;
-    const canvas = document.getElementById('myChart');
+    var sqlResponse = null;
 
-    function resetChart(){
-        if (myChart) {
-            myChart.destroy();
-        }
-
-        myChart = new Chart(document.getElementById('myChart').getContext('2d'), {
-            type: "line",
-            data: {
-                labels: [],
-                datasets: []
+    function submitQuery() {
+        document.getElementById('query_results').innerHTML = '';
+        const query = document.getElementById('queryInput').value;
+        fetch('/sql', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
             },
-            options: {
-                responsive: false,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        ticks: {
-                            stepSize: 1
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            autoSkip: true,
-                            maxRotation: 45,
-                            minRotation: 45
-                        }
-                    }
-                }
-            }
+            body: JSON.stringify({ query: query })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('query_results').innerHTML = createHtmlTableFromData(data);
+            sqlResponse = data;
+        }).catch(error => {
+            console.log('catch-error: ', error);
         });
     }
 
+    function createHtmlTableFromData(data) {
+        let tableHtml = "<table><thead><tr>";
+        data.columns.forEach(column => {
+            tableHtml += `<th>${column}</th>`;
+        });
+        tableHtml += "</tr></thead><tbody>";
+        data.rows.forEach(row => {
+            tableHtml += "<tr>";
+            data.columns.forEach(column => {
+                tableHtml += `<td>${row[column]}</td>`;
+            });
+            tableHtml += "</tr>";
+        });
+        tableHtml += "</tbody></table>";
+        return tableHtml;
+    }
+
     function renderChart() {
+        const canvas = document.getElementById('myChart');
         const granularity = document.getElementById('timeGranularity').value;
         const processedData = processDataForChart(sqlResponse, granularity);
         
-        // Set the canvas size
-        canvas.style.width = ((10 * processedData.labels.length) + 100) + 'px';
-        canvas.style.height = '500px';
+        // Set the canvas container size
+        const minSpacing = document.getElementById('paddingText').value; 
+        const innerPadding = 100, maxWidth = 800; //800px is the width of the chart container 
+        const spacing = Math.max((maxWidth - innerPadding) / processedData.labels.length, minSpacing); 
+        const totalWidth = (spacing * processedData.labels.length) + innerPadding;
+        document.getElementById('canvasContainer').style.width = `${totalWidth}px`;
         
-        // we have to destroy then create a new chart because totalWidth is based on the sql response size
-        resetChart();
-        myChart.data = processedData;
-        myChart.update();
+        if (canvas.chart) {
+            // Update the existing chart with new data
+            canvas.chart.data.labels = processedData.labels;
+            canvas.chart.data.datasets = processedData.datasets;
+            canvas.chart.update();
+        } else {
+            // Create a new Chart instance
+            canvas.chart = new Chart(canvas.getContext('2d'), {
+                type: "line",
+                data: processedData,
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                autoSkip: true,
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     function processDataForChart(data, granularity) {
@@ -224,7 +230,7 @@
             return returnObject;
         }
 
-        let dataColumns = data.columns; //load all the columns
+        let dataColumns = data.columns; //load all the column names
         let timeColumn = dataColumns.shift(); //the first one is the date
     
         const firstTime = new Date(data.rows[0][timeColumn] + 'Z'); // +Z since our data should always be UTC
@@ -270,8 +276,6 @@
                 return `${year}-${month}-${day}`;
             case 'hourly':
                 return `${year}-${month}-${day} ${hour}:00`;
-            default:
-                return `${year}-${month}-${day} ${hour}:00`; 
         }
     }
     
@@ -295,16 +299,16 @@
     //this is a closure iterator that returns the next color in the list
     function createColorIterator() {
         const bgColors = [
-            'rgba(252, 186, 3)', // Soft Amber
-            'rgba(165, 230, 253)', // Gentle Blue
-            'rgba(205, 240, 191)', // Light Mint Green
-            'rgba(244, 194, 194)', // Salmon Pink
-            'rgba(255, 248, 225)', // Vanilla
-            'rgba(163, 228, 215)', // Aquamarine
-            'rgba(198, 139, 119)', // Antique Brass
-            'rgba(85, 98, 112)', // Lead Grey
-            'rgba(231, 206, 188)', // Bone
-            'rgba(207, 216, 220)' // Blue Grey
+            'rgba(59, 89, 152)', // Royal Blue
+            'rgba(255, 153, 51)', // Orange
+            'rgba(0, 166, 147)', // Teal
+            'rgba(219, 68, 55)', // Red
+            'rgba(102, 45, 145)', // Purple
+            'rgba(0, 180, 216)', // Cyan
+            'rgba(255, 87, 51)', // Tangerine
+            'rgba(84, 179, 136)', // Moss Green
+            'rgba(255, 205, 64)', // Yellow
+            'rgba(220, 118, 51)' // Pumpkin
         ];
         let currentIndex = 0;
       
