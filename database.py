@@ -81,8 +81,9 @@ def parse_log_file(log_path):
 
 
 def rotate_log_file(from_path, to_path):
-    shutil.move(from_path, to_path) #change the filename
-    open(from_path, 'a').close() #create a blank file
+    shutil.copy2(from_path, to_path)  # Copy the contents to a new file
+    with open(from_path, 'r+') as file:   # Open the original file in read/write mode
+        file.truncate(0)                 # Truncate the file content
 
 def append_log(from_path, to_path):
     with open(from_path, 'r') as file_read:
