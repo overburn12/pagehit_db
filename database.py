@@ -49,29 +49,31 @@ def query(raw_text):
 def parse_log_file(log_path):
     Session = sessionmaker(bind=engine)
     session = Session()
+
     try:
-        with open(log_path, 'r') as file:
+        with open(log_path, 'r+') as file:
             log_entries = file.readlines()
-            if log_entries:  # Check if there are entries to process
-                for line in log_entries:
-                    try:
-                        log_entry = json.loads(line)
-                        page_hit = PageHit(
-                            visit_datetime=datetime.strptime(log_entry['time_local'], '%d/%b/%Y:%H:%M:%S %z'),
-                            visitor_id=log_entry['visitor_id'],
-                            scheme=log_entry['scheme'],
-                            website_id=log_entry['website_id'],
-                            page_url=log_entry['page_url'],
-                            method=log_entry['method'],
-                            response_code=int(log_entry['response_code']),
-                            bytes_sent=int(log_entry['bytes_sent']),
-                            referrer_url=log_entry['referrer_url'],
-                            user_agent=log_entry['user_agent']
-                        )
-                        session.add(page_hit)
-                    except Exception as e:
-                        print(f"Error processing line: {e}")
-                session.commit()
+            file.truncate(0)
+        if log_entries:  # Check if there are entries to process
+            for line in log_entries:
+                try:
+                    log_entry = json.loads(line)
+                    page_hit = PageHit(
+                        visit_datetime=datetime.strptime(log_entry['time_local'], '%d/%b/%Y:%H:%M:%S %z'),
+                        visitor_id=log_entry['visitor_id'],
+                        scheme=log_entry['scheme'],
+                        website_id=log_entry['website_id'],
+                        page_url=log_entry['page_url'],
+                        method=log_entry['method'],
+                        response_code=int(log_entry['response_code']),
+                        bytes_sent=int(log_entry['bytes_sent']),
+                        referrer_url=log_entry['referrer_url'],
+                        user_agent=log_entry['user_agent']
+                    )
+                    session.add(page_hit)
+                except Exception as e:
+                    print(f"Error processing line: {e}")
+            session.commit()
     except IOError as e:
         print(f"Failed to open or read file {log_path}: {e}")
     except SQLAlchemyError as e:
@@ -81,9 +83,9 @@ def parse_log_file(log_path):
 
 
 def rotate_log_file(from_path, to_path):
-    shutil.copy2(from_path, to_path)  # Copy the contents to a new file
-    with open(from_path, 'r+') as file:   # Open the original file in read/write mode
-        file.truncate(0)                 # Truncate the file content
+    shutil.copy2(from_path, to_path)
+    with open(from_path, 'r+') as file:
+        file.truncate(0)
 
 def append_log(from_path, to_path):
     with open(from_path, 'r') as file_read:
