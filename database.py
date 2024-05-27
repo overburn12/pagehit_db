@@ -54,7 +54,7 @@ def parse_log_file(log_path):
         with open(log_path, 'r+') as file:
             log_entries = file.readlines()
             file.truncate(0)
-        if log_entries:  # Check if there are entries to process
+        if log_entries:
             for line in log_entries:
                 try:
                     log_entry = json.loads(line)
