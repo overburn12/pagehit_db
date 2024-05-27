@@ -80,18 +80,3 @@ def parse_log_file(log_path):
         print(f"Database error: {e}")
     finally:
         session.close()
-
-
-def rotate_log_file(from_path, to_path):
-    shutil.copy2(from_path, to_path)
-    with open(from_path, 'r+') as file:
-        file.truncate(0)
-
-def append_log(from_path, to_path):
-    with open(from_path, 'r') as file_read:
-        content = file_read.read()  
-    with open(to_path, 'a') as file_append:
-        file_append.write(content)  
-
-def cleanup(log_path):
-    os.remove(log_path)
