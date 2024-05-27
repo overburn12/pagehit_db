@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, text, Column, Integer, String, DateTime, Index
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.exc import SQLAlchemyError
 import json, shutil, os
 from datetime import datetime
 
@@ -47,26 +48,35 @@ def query(raw_text):
 def parse_log_file(log_path):
     Session = sessionmaker(bind=engine)
     session = Session()
-    with open(log_path, 'r') as file:
-        for line in file:
-            try:
-                log_entry = json.loads(line)
-                page_hit = PageHit(
-                    visit_datetime=datetime.strptime(log_entry['time_local'], '%d/%b/%Y:%H:%M:%S %z'),
-                    visitor_id=log_entry['visitor_id'],
-                    scheme=log_entry['scheme'],
-                    website_id=log_entry['website_id'],
-                    page_url=log_entry['page_url'],
-                    method=log_entry['method'],
-                    response_code=int(log_entry['response_code']),
-                    bytes_sent=int(log_entry['bytes_sent']),
-                    referrer_url=log_entry['referrer_url'],
-                    user_agent=log_entry['user_agent']
-                )
-                session.add(page_hit)
-            except Exception as e:
-                print(f"Error processing line: {e}")
-            session.commit()
+    try:
+        with open(log_path, 'r') as file:
+            log_entries = file.readlines()
+            if log_entries:  # Check if there are entries to process
+                for line in log_entries:
+                    try:
+                        log_entry = json.loads(line)
+                        page_hit = PageHit(
+                            visit_datetime=datetime.strptime(log_entry['time_local'], '%d/%b/%Y:%H:%M:%S %z'),
+                            visitor_id=log_entry['visitor_id'],
+                            scheme=log_entry['scheme'],
+                            website_id=log_entry['website_id'],
+                            page_url=log_entry['page_url'],
+                            method=log_entry['method'],
+                            response_code=int(log_entry['response_code']),
+                            bytes_sent=int(log_entry['bytes_sent']),
+                            referrer_url=log_entry['referrer_url'],
+                            user_agent=log_entry['user_agent']
+                        )
+                        session.add(page_hit)
+                    except Exception as e:
+                        print(f"Error processing line: {e}")
+                session.commit()
+    except IOError as e:
+        print(f"Failed to open or read file {log_path}: {e}")
+    except SQLAlchemyError as e:
+        print(f"Database error: {e}")
+    finally:
+        session.close()
 
 
 def rotate_log_file(from_path, to_path):

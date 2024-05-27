@@ -35,11 +35,11 @@ ADMIN_NAME = os.getenv('ADMIN_NAME')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 ADMIN_PASSWORD_HASH = generate_password_hash(ADMIN_PASSWORD)
 
-DB_URI = os.getenv('DB_URI')
+DATABASE_URL = os.getenv('DATABASE_URL')
 LOG_FILE_PATH = os.getenv('LOG_FILE_PATH')
 SCRAPED_LOG_FILE_PATH = os.getenv('SCRAPED_LOG_FILE_PATH')
 
-database.init_db(DB_URI)
+database.init_db(DATABASE_URL)
 
 
 #--------------------------------------------------------------------------------------
@@ -130,6 +130,7 @@ def parse_log_task():
         database.rotate_log_file(LOG_FILE_PATH, SCRAPED_LOG_FILE_PATH)
         database.parse_log_file(SCRAPED_LOG_FILE_PATH)
         database.cleanup(SCRAPED_LOG_FILE_PATH)
+        print ('scraped logs')
 
 
 #--------------------------------------------------------------------------------------
