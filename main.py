@@ -129,7 +129,6 @@ def parse_log_task():
         time.sleep(60)  # Sleep for 60 seconds
         database.rotate_log_file(LOG_FILE_PATH, SCRAPED_LOG_FILE_PATH)
         database.parse_log_file(SCRAPED_LOG_FILE_PATH)
-        database.append_log(SCRAPED_LOG_FILE_PATH, LOG_FILE_PATH + '.old')
         database.cleanup(SCRAPED_LOG_FILE_PATH)
 
 
