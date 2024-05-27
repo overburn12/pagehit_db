@@ -84,6 +84,11 @@ def rotate_log_file(from_path, to_path):
     shutil.move(from_path, to_path) #change the filename
     open(from_path, 'a').close() #create a blank file
 
+def append_log(from_path, to_path):
+    with open(from_path, 'r') as file_read:
+        content = file_read.read()  
+    with open(to_path, 'a') as file_append:
+        file_append.write(content)  
 
 def cleanup(log_path):
     os.remove(log_path)
