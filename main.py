@@ -37,7 +37,6 @@ ADMIN_PASSWORD_HASH = generate_password_hash(ADMIN_PASSWORD)
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 LOG_FILE_PATH = os.getenv('LOG_FILE_PATH')
-SCRAPED_LOG_FILE_PATH = os.getenv('SCRAPED_LOG_FILE_PATH')
 
 database.init_db(DATABASE_URL)
 
