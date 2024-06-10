@@ -223,6 +223,9 @@
     }
 
     function processDataForChart(data, granularity) {
+        //this function proccesses time-base data from an sql query and processes it into a charts.js object
+
+        //the charts.js object, chart.data
         let returnObject = { labels: [], datasets: [] };
 
         if (!data || !data.rows || data.rows.length === 0) {
@@ -231,12 +234,14 @@
         }
 
         let dataColumns = data.columns; //load all the column names
-        let timeColumn = dataColumns.shift(); //the first one is the date
+        let timeColumn = dataColumns.shift(); //the first column is the date-time
     
         const firstTime = new Date(data.rows[0][timeColumn] + 'Z'); // +Z since our data should always be UTC
         const lastTime = new Date(data.rows[data.rows.length - 1][timeColumn] + 'Z');    
         let fullTimeBlocks = [];
 
+        //increment through the date, fristTime to lastTime, and increment by the granularity
+        //this creates a full array of time slots
         for(let currentTime = new Date(firstTime); 
             currentTime <= lastTime; 
             incrementTime(currentTime, granularity)){
@@ -248,8 +253,11 @@
 
         dataColumns.forEach(colName => {
             const dataMap = new Map(data.rows.map(row => [row[timeColumn], row[colName]]));
-            let mergedData = fullTimeBlocks.map(block => dataMap.get(block) || 0);
+            
+            //this maps the current colName data into the fullTimeBlocks time slots
+            let mergedData = fullTimeBlocks.map(block => dataMap.get(block) || 0); //add the data if available, or fill it with 0
 
+            //add the mergedData to the datasets
             returnObject.datasets.push({
                 label: colName, 
                 data: mergedData, 
@@ -296,28 +304,50 @@
         }
     }
 
-    //this is a closure iterator that returns the next color in the list
-    function createColorIterator() {
-        const bgColors = [
-            'rgba(59, 89, 152)', // Royal Blue
-            'rgba(255, 153, 51)', // Orange
-            'rgba(0, 166, 147)', // Teal
-            'rgba(219, 68, 55)', // Red
-            'rgba(102, 45, 145)', // Purple
-            'rgba(0, 180, 216)', // Cyan
-            'rgba(255, 87, 51)', // Tangerine
-            'rgba(84, 179, 136)', // Moss Green
-            'rgba(255, 205, 64)', // Yellow
-            'rgba(220, 118, 51)' // Pumpkin
-        ];
-        let currentIndex = 0;
-      
-        return () => {
-          const color = bgColors[currentIndex]; // Get the current color
-          currentIndex = (currentIndex + 1) % bgColors.length; // Move to next index or loop back to 0
-          return color; // Return the current color
-        };
-    }
+// This is a closure iterator that returns the next color in the list
+function createColorIterator() {
+    const bgColors = [
+        'rgba(59, 89, 152)',   // Royal Blue
+        'rgba(255, 153, 51)',  // Orange
+        'rgba(0, 166, 147)',   // Teal
+        'rgba(219, 68, 55)',   // Red
+        'rgba(102, 45, 145)',  // Purple
+        'rgba(0, 180, 216)',   // Cyan
+        'rgba(255, 87, 51)',   // Tangerine
+        'rgba(84, 179, 136)',  // Moss Green
+        'rgba(255, 205, 64)',  // Yellow
+        'rgba(220, 118, 51)',  // Pumpkin
+        'rgba(75, 192, 192)',  // Light Sea Green
+        'rgba(153, 102, 255)', // Lavender
+        'rgba(255, 159, 64)',  // Peach
+        'rgba(54, 162, 235)',  // Light Blue
+        'rgba(231, 233, 237)', // Light Grey
+        'rgba(201, 203, 207)', // Silver
+        'rgba(255, 99, 132)',  // Rose
+        'rgba(255, 206, 86)',  // Light Yellow
+        'rgba(75, 192, 192)',  // Light Green
+        'rgba(153, 102, 255)', // Periwinkle
+        'rgba(255, 159, 64)',  // Coral
+        'rgba(99, 255, 132)',  // Mint
+        'rgba(206, 86, 255)',  // Orchid
+        'rgba(175, 192, 192)', // Steel Teal
+        'rgba(102, 153, 0)',   // Dark Olive
+        'rgba(204, 0, 204)',   // Magenta
+        'rgba(51, 51, 255)',   // Electric Blue
+        'rgba(255, 0, 255)',   // Fuchsia
+        'rgba(0, 255, 0)',     // Bright Green
+        'rgba(255, 255, 0)',   // Bright Yellow
+        'rgba(0, 255, 255)',   // Aqua
+        'rgba(255, 0, 0)'      // Bright Red
+    ];
+    let currentIndex = 0;
+    
+    return () => {
+        const color = bgColors[currentIndex]; // Get the current color
+        currentIndex = (currentIndex + 1) % bgColors.length; // Move to next index or loop back to 0
+        return color; // Return the current color
+    };
+}
     
 </script>
 

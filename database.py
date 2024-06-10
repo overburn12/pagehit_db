@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text, Column, Integer, String, DateTime, Index
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
-import json, shutil, os
+import json
 from datetime import datetime
 
 Base = declarative_base()
