@@ -34,6 +34,6 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }} 
         script: |
-          cd /docker
+          cd docker
           docker-compose pull admin_container
           docker-compose up -d --no-deps --force-recreate admin_container
