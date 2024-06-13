@@ -35,5 +35,6 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }} 
         script: |
           cd docker
-          docker-compose pull admin_container
-          docker-compose up -d --no-deps --force-recreate admin_container
+          docker-compose down
+          docker pull overburn12/dev_overburn_admin:latest
+          docker-compose up -d
