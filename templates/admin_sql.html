@@ -170,12 +170,30 @@
         data.rows.forEach(row => {
             tableHtml += "<tr>";
             data.columns.forEach(column => {
-                tableHtml += `<td>${row[column]}</td>`;
+                if (column === 'response_code') {
+                    tableHtml += `<td style="background-color: ${getResponseColor(row[column])}">${row[column]}</td>`;
+                } else {
+                    tableHtml += `<td>${row[column]}</td>`;
+                }
             });
             tableHtml += "</tr>";
         });
         tableHtml += "</tbody></table>";
         return tableHtml;
+    }
+
+    function getResponseColor(response_code) {
+        const level = Math.floor(response_code / 100);
+        let color;
+        switch (level) {
+            case 1: color = 'blue'; break;
+            case 2: color = 'green'; break;
+            case 3: color = 'yellow'; break;
+            case 4: color = 'red'; break;
+            case 5: color = 'purple'; break;
+            default: color = response_code === 444 ? 'black' : 'white';
+        }
+        return color;
     }
 
     function renderChart() {
