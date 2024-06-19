@@ -82,28 +82,27 @@
 
 
 <script>
+    let currentQueries = {};
+
     function saveQuery() {
         const title = prompt("Enter a title for the query:");
         if (title) {
             const query = document.getElementById('queryInput').value;
-            let queries = JSON.parse(localStorage.getItem('queries')) || [];
-            queries.push({ title, query });
-            localStorage.setItem('queries', JSON.stringify(queries));
-            updateSavedQueriesList();
+            currentQueries.push({ title, query });
+            postQueries(currentQueries); //POST the currentQueries object to the server to save it
+            displayQueries();
         }
     }
 
-    function updateSavedQueriesList() {
-        let queries = JSON.parse(localStorage.getItem('queries')) || [];
-        let listHtml = queries.map((item, index) => 
+    function displayQueries() {
+        let listHtml = currentQueries.map((item, index) => 
             `<div onclick="loadQuery(${index})">${index}. ${item.title}</div>`
         ).join('');
         document.getElementById('savedQueriesList').innerHTML = listHtml;
     }
 
     function loadQuery(index) {
-        let queries = JSON.parse(localStorage.getItem('queries'));
-        document.getElementById('queryInput').value = queries[index].query;
+        document.getElementById('queryInput').value = currentQueries[index].query;
     }
 
     function newQuery() {
@@ -114,11 +113,10 @@
         const index = prompt("Enter the index of the query to rename:");
         if (index !== null) {
             const newTitle = prompt("Enter the new title:");
-            let queries = JSON.parse(localStorage.getItem('queries'));
-            if (queries[index]) {
-                queries[index].title = newTitle;
-                localStorage.setItem('queries', JSON.stringify(queries));
-                updateSavedQueriesList();
+            if (currentQueries[index]) {
+                currentQueries[index].title = newTitle;
+                postQueries(currentQueries); //POST the new currentQueries to the server to save it
+                displayQueries();
             }
         }
     }
@@ -132,6 +130,40 @@
                 localStorage.setItem('queries', JSON.stringify(queries));
                 updateSavedQueriesList();
             }
+        }
+    }
+
+    async function getQueries() {
+        try {
+            const response = await fetch('/queries');
+            if (response.ok) {
+                return await response.json();
+            } else {
+                console.error("Failed to fetch queries");
+                return [];
+            }
+        } catch (error) {
+            console.error("Error fetching queries:", error);
+            return [];
+        }
+    }
+
+    async function postQueries(queries) {
+        try {
+            const response = await fetch('/queries', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(queries)
+            });
+            if (response.ok) {
+                return await response.json();
+            } else {
+                console.error("Failed to save queries");
+            }
+        } catch (error) {
+            console.error("Error saving queries:", error);
         }
     }
 
