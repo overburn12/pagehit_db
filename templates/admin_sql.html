@@ -82,7 +82,7 @@
 
 
 <script>
-    let currentQueries = {};
+    var currentQueries = [];
 
     function saveQuery() {
         const title = prompt("Enter a title for the query:");
@@ -90,12 +90,17 @@
             const query = document.getElementById('queryInput').value;
             currentQueries.push({ title, query });
             postQueries(currentQueries); //POST the currentQueries object to the server to save it
-            displayQueries();
         }
     }
 
-    function displayQueries() {
-        let listHtml = currentQueries.map((item, index) => 
+    function displayQueries(argQueries) {
+        var tempQueries = [];
+        if (argQueries === undefined){
+            tempQueries = currentQueries;
+        } else {
+            tempQueries = argQueries;
+        }
+        let listHtml = tempQueries.map((item, index) => 
             `<div onclick="loadQuery(${index})">${index}. ${item.title}</div>`
         ).join('');
         document.getElementById('savedQueriesList').innerHTML = listHtml;
@@ -116,7 +121,6 @@
             if (currentQueries[index]) {
                 currentQueries[index].title = newTitle;
                 postQueries(currentQueries); //POST the new currentQueries to the server to save it
-                displayQueries();
             }
         }
     }
@@ -127,48 +131,42 @@
             if (currentQueries[index]) {
                 currentQueries.splice(index, 1);
                 postQueries(currentQueries); //POST the new currentQueries to the server to save it
-                displayQueries();
             }
         }
     }
 
-    async function getQueries() {
-        try {
-            const response = await fetch('/queries');
-            if (response.ok) {
-                return await response.json();
-            } else {
-                console.error("Failed to fetch queries");
-                return [];
-            }
-        } catch (error) {
+    function getQueries() {
+        fetch('/queries')
+        .then(response => response.json())
+        .then(data => {
+                currentQueries = data;
+                displayQueries(data);
+        })
+        .catch (error => {
             console.error("Error fetching queries:", error);
-            return [];
-        }
+            currentQueries = [];
+        });
     }
 
-    async function postQueries(queries) {
-        try {
-            const response = await fetch('/queries', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(queries)
-            });
-            if (response.ok) {
-                return await response.json();
-            } else {
-                console.error("Failed to save queries");
-            }
-        } catch (error) {
+    function postQueries(queries) {
+        fetch('/queries', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(queries)
+        })
+        .then(response => response.json())
+        .then( data => {
+                currentQueries = data;
+                displayQueries(data);
+        })
+        .catch (error => {
             console.error("Error saving queries:", error);
-        }
+        });
     }
 
-    //get and display saved queries on page load
-    currentQueries = getQueries();
-    displayQueries();
+    getQueries();
 </script>
 
 <script>

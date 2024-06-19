@@ -58,7 +58,7 @@ def set_admin_cookie(response):
 def get_query_list():
     if not os.path.exists(QUERY_LIST_PATH):
             with open(QUERY_LIST_PATH, 'w') as file:
-                json.dump({}, file)
+                json.dump([], file)
 
     with open(QUERY_LIST_PATH, 'r') as file:
         return json.load(file)
@@ -87,7 +87,6 @@ def execute_sql_query():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-
 
 @app.route('/queries', methods = ['GET', 'POST'])
 @admin_required
