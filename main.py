@@ -3,9 +3,7 @@ from flask import Flask, request, jsonify, Response, session, flash, redirect, u
 from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 from dotenv import load_dotenv
-import os, datetime
-import threading
-import time
+import os, datetime, threading, time, json
 
 import database
 
@@ -38,6 +36,8 @@ ADMIN_PASSWORD_HASH = generate_password_hash(ADMIN_PASSWORD)
 DATABASE_URL = os.getenv('DATABASE_URL')
 LOG_FILE_PATH = os.getenv('LOG_FILE_PATH')
 
+QUERY_LIST_PATH = os.getenv('QUERY_LIST_FILE')
+
 database.init_db(DATABASE_URL)
 
 
@@ -54,6 +54,19 @@ def set_admin_cookie(response):
     response.set_cookie('admin_cookie', 'true', domain='.overburn.dev', expires=expiration)
     return response
 
+
+def get_query_list():
+    if not os.path.exists(QUERY_LIST_PATH):
+            with open(QUERY_LIST_PATH, 'w') as file:
+                json.dump({}, file)
+
+    with open(QUERY_LIST_PATH, 'r') as file:
+        return json.load(file)
+
+
+def set_query_list(query_list):
+    with open(QUERY_LIST_PATH, 'w') as file:
+        json.dump(query_list, file)
 
 #--------------------------------------------------------------------------------------
 # sql routes
@@ -73,6 +86,19 @@ def execute_sql_query():
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+
+
+@app.route('/queries', methods = ['GET', 'POST'])
+@admin_required
+def get_set_queries():
+    if request.method == 'GET':
+        return jsonify(get_query_list())
+    
+    if request.method == 'POST':
+        queries = request.get_json()
+        set_query_list(queries)
+        return jsonify(queries)
 
 
 #--------------------------------------------------------------------------------------

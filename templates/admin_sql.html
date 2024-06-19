@@ -124,11 +124,10 @@
     function deleteQuery() {
         const index = prompt("Enter the index of the query to delete:");
         if (index !== null) {
-            let queries = JSON.parse(localStorage.getItem('queries'));
-            if (queries[index]) {
-                queries.splice(index, 1);
-                localStorage.setItem('queries', JSON.stringify(queries));
-                updateSavedQueriesList();
+            if (currentQueries[index]) {
+                currentQueries.splice(index, 1);
+                postQueries(currentQueries); //POST the new currentQueries to the server to save it
+                displayQueries();
             }
         }
     }
@@ -167,8 +166,9 @@
         }
     }
 
-    // Call updateSavedQueriesList to display saved queries on page load
-    updateSavedQueriesList();
+    //get and display saved queries on page load
+    currentQueries = getQueries();
+    displayQueries();
 </script>
 
 <script>
